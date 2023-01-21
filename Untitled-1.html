@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="container">
+
+    </div>
+
+    <div id="container">
+        
+    </div>
+</body>
+<style>
+    #container{
+        display: grid;
+        grid-template-rows: repeat(11, 30px);
+        grid-template-columns: repeat(11, 30px);
+    }
+    .gridPart{
+        border: 1px solid rgb(0, 0, 0);
+        width: 30px;
+        height:30px;
+    }
+</style>
+<script>
+    let grid1 = [];
+    let grid2 = [];
+
+    for(i = 0; i <= 10; i += 1){
+        grid1.push([])
+        grid2.push([])
+        for(j = 1; j <= 11; j += 1){
+            if(j === 1){
+                grid1[i].push(i + 1)
+            }else if(i === 0){
+                grid1[i].push(String.fromCharCode(95 + j))
+                grid2[i].push(String.fromCharCode(95 + j))
+            }else{
+                grid1[i].push("0")
+                grid2[i].push("0")
+            }
+        }
+    }
+
+    console.log(grid1[0])
+    console.log(grid1[1])
+    console.log(grid1[2])
+
+    for (let i = 0; i < 11; i++) {
+        for (let j = 0; j < 11; j++) {
+          let gridPart = document.createElement("div");
+
+          gridPart.classList.add("gridPart");
+          gridPart.classList.add("row" + i)
+          gridPart.classList.add("column" + j)
+          if(j === 0){
+            gridPart.style.backgroundColor = "green"; //123
+          }else if(i === 0){
+            gridPart.style.backgroundColor = "yellow" //abc
+          }else{
+            gridPart.style.backgroundColor = "red";       
+            gridPart.classList.add("playable");
+          }
+          document.getElementById("container").appendChild(gridPart)   
+        }
+    }
+
+</script>
+</html>
