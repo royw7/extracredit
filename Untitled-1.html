@@ -7,21 +7,31 @@
     <title>Document</title>
 </head>
 <body>
-    <div onmousedown="clicked(event)" class="container" id="computer">
-
-    </div>
-
-    <div class="container" id="player">
+    
+    <div class="container" id="player" style="float:left">
         
     </div>
-     <p>Log</p>
+    
+    <div onmousedown="fireTorpedo(event)" class="container" id="computer">
+        
+    </div>
+    <br>
+    <button onclick="debug()">debug</button>
+    <button onclick="start()">start</button>
+    <button onclick="computerFire()">fired</button>
+    <button onclick="rotate()"><span id="buttonIndicator">Change to Horizontal Placement</span></button>
+    <p>Log</p>
+    <div id="log">
+        <span id="status">Status: Setup</span>
+        <br>
+        <span id="turn"></span>
+    </div>
 </body>
 <style>
     .container{
         display: grid;
         grid-template-rows: repeat(11, 30px);
         grid-template-columns: repeat(11, 30px);
-        float:left;
         padding-right:50px;
     }
     .gridPart{
@@ -31,29 +41,11 @@
     }
 </style>
 <script>
-    let grid1 = [];
-    let grid2 = [];
+    var shipSelected = false;
+    var started = false;
+    var shipDown = 0;
 
-    for(i = 0; i <= 10; i += 1){
-        grid1.push([])
-        grid2.push([])
-        for(j = 1; j <= 11; j += 1){
-            if(j === 1){
-                grid1[i].push(i + 1)
-            }else if(i === 0){
-                grid1[i].push(String.fromCharCode(95 + j))
-                grid2[i].push(String.fromCharCode(95 + j))
-            }else{
-                grid1[i].push("0")
-                grid2[i].push("0")
-            }
-        }
-    }
-
-    console.log(grid1[0])
-    console.log(grid1[1])
-    console.log(grid1[2])
-
+    document.getElementById("player").addEventListener("click", mouseClick)
     for (let i = 0; i < 11; i++) {
         for (let j = 0; j < 11; j++) {
           let gridPart = document.createElement("div");
@@ -70,17 +62,414 @@
           }else{
             gridPart.style.backgroundColor = "grey";       
             gridPart.classList.add("playable");
+            gridPart.setAttribute("id", (String.fromCharCode(96 + j) + i))
+            gridPart.appendChild(document.createTextNode(String.fromCharCode(96 + j) + i))
+            gridPart.addEventListener("mouseover", mouseEnter)
+            gridPart.addEventListener("mouseout", mouseLeave)
           }
           document.getElementById("player").appendChild(gridPart)   
-          document.getElementById("computer").appendChild(gridPart.cloneNode(true))   
-
+          var clone = gridPart.cloneNode(true)
+          clone.id = `c_${gridPart.id}`
+          document.getElementById("computer").appendChild(clone)   
         }
     }
 
-    function clicked(event){
-        if(event.target.classList.contains("playable")){
-            event.target.style.backgroundColor = "red"
+    const aircraftCarrierIntialize = ["A1", "A2", "A3", "A4", "A5"]; // purple
+    const battleShipIntialize = ["B1", "B2", "B3", "B4"]; // blue
+    const destroyerIntialize = ["C1", "C2", "C3"]; // green
+    const submarineIntialize = ["D1", "D2", "D3"]; // yellow
+    const patrolIntialize = ["E1", "E2"]; // orange
+
+
+    for(const gridPart of document.getElementById("player").querySelectorAll(".playable")){
+        if(aircraftCarrierIntialize.indexOf(gridPart.id.toUpperCase()) > -1){
+            gridPart.style.backgroundColor = "purple"
+            gridPart.classList.add("aircraftCarrier")
         }
+        if(battleShipIntialize.indexOf(gridPart.id.toUpperCase()) > -1){
+            gridPart.style.backgroundColor = "blue"
+            gridPart.classList.add("battleship")
+        }
+        if(destroyerIntialize.indexOf(gridPart.id.toUpperCase()) > -1){
+            gridPart.style.backgroundColor = "green"
+            gridPart.classList.add("destroyer")
+        }
+        if(submarineIntialize.indexOf(gridPart.id.toUpperCase()) > -1){
+            gridPart.style.backgroundColor = "yellow"
+            gridPart.classList.add("submarine")
+        }
+        if(patrolIntialize.indexOf(gridPart.id.toUpperCase()) > -1){
+            gridPart.style.backgroundColor = "orange"
+            gridPart.classList.add("patrol")
+        }
+    }
+
+    var prevColor = [];
+    var showColor = null;
+    var bound = null; 
+    var isVertical = false 
+    var row = null;
+    var column = null;
+    var shipType = null;
+
+    function mouseClick(event){
+        if(shipSelected && event.target.style.backgroundColor == showColor){
+            shipSelected = false
+            for(const gridPart of document.getElementById("player").querySelectorAll(".playable")){
+            if(!isVertical){
+                if(gridPart.id.replace( /^\D+/g, '') <= row + bound && gridPart.id.replace( /^\D+/g, '') >= row){
+                    if(gridPart.id.replace(/[^A-Za-z]/g, '') === column){
+                        gridPart.classList.add(shipType)
+                    }
+                 }
+            }else{
+                if(gridPart.id.replace( /^\D+/g, '') == row){
+                        if(gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) >= column.charCodeAt(0) && gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) <= column.charCodeAt(0) + bound){
+                            gridPart.classList.add(shipType)
+                        }
+                    } 
+            }
+            
+            }
+        }else if(event.target.classList.contains("aircraftCarrier") && !shipSelected){
+            shipSelected = true
+            for(const gridPart of document.getElementById("player").querySelectorAll(".aircraftCarrier")){
+                gridPart.style.backgroundColor = "grey"
+                gridPart.classList.remove("aircraftCarrier")
+                showColor = "purple"
+                bound = 4
+                shipType = "aircraftCarrier"
+            }
+        }else if(event.target.classList.contains("battleship") && !shipSelected){
+            shipSelected = true
+            for(const gridPart of document.getElementById("player").querySelectorAll(".battleship")){
+                gridPart.style.backgroundColor = "grey"
+                gridPart.classList.remove("battleship")
+                showColor = "blue"
+                bound = 3
+                shipType = "battleship"
+            }
+        }else if(event.target.classList.contains("destroyer") && !shipSelected){
+            shipSelected = true
+            for(const gridPart of document.getElementById("player").querySelectorAll(".destroyer")){
+                gridPart.style.backgroundColor = "grey"
+                gridPart.classList.remove("destroyer")
+                showColor = "green"
+                bound = 2
+                shipType = "destroyer"
+            }
+        }else if(event.target.classList.contains("submarine") && !shipSelected){
+            shipSelected = true
+            for(const gridPart of document.getElementById("player").querySelectorAll(".submarine")){
+                gridPart.style.backgroundColor = "grey"
+                gridPart.classList.remove("submarine")
+                showColor = "yellow"
+                bound = 2
+                shipType = "submarine"
+            }
+        }else if(event.target.classList.contains("patrol") && !shipSelected){
+            shipSelected = true
+            for(const gridPart of document.getElementById("player").querySelectorAll(".patrol")){
+                gridPart.style.backgroundColor = "grey"
+                gridPart.classList.remove("patrol")
+                showColor = "orange"
+                bound = 1
+                shipType = "patrol"
+            }
+        }          
+    }       
+
+    function mouseEnter(event){
+        try{
+        prevColor.length = 0
+        prevColor.push(event.target.style.backgroundColor)
+
+        let condition1 = shipSelected && event.target.style.backgroundColor == "grey" &&
+        ((!isVertical && document.getElementById(event.target.id.replace(/[^A-Za-z]/g, '') + (parseInt((event.target.id.replace( /^\D+/g, '')))  + 1)).style.backgroundColor == "grey"
+        && document.getElementById(event.target.id.replace(/[^A-Za-z]/g, '') + (parseInt((event.target.id.replace( /^\D+/g, '')))  + 2)).style.backgroundColor == "grey"
+        && document.getElementById(event.target.id.replace(/[^A-Za-z]/g, '') + (parseInt((event.target.id.replace( /^\D+/g, '')))  + 3)).style.backgroundColor == "grey"
+        && document.getElementById(event.target.id.replace(/[^A-Za-z]/g, '') + (parseInt((event.target.id.replace( /^\D+/g, '')))  + bound)).style.backgroundColor == "grey")
+        )
+        
+        let condition2 = shipSelected && event.target.style.backgroundColor == "grey" &&
+        ((isVertical && document.getElementById(String.fromCharCode(event.target.id.charCodeAt(0) + 1) + parseInt((event.target.id.replace( /^\D+/g, '')))).style.backgroundColor == "grey" 
+        && document.getElementById(String.fromCharCode(event.target.id.charCodeAt(0) + 2) + parseInt((event.target.id.replace( /^\D+/g, '')))).style.backgroundColor == "grey" 
+        && document.getElementById(String.fromCharCode(event.target.id.charCodeAt(0) + 3) + parseInt((event.target.id.replace( /^\D+/g, '')))).style.backgroundColor == "grey"  
+        && document.getElementById(String.fromCharCode(event.target.id.charCodeAt(0) + bound) + parseInt((event.target.id.replace( /^\D+/g, '')))).style.backgroundColor == "grey" )
+        )
+
+        if(condition1 || condition2){
+            event.target.style.backgroundColor = showColor
+            
+            let gridPosition = event.target.id
+
+            column = gridPosition.replace(/[^A-Za-z]/g, '');
+            row = parseInt(gridPosition.replace( /^\D+/g, ''));
+            
+            for(const gridPart of document.getElementById("player").querySelectorAll(".playable")){
+                if(isVertical){
+                    if(gridPart.id.replace( /^\D+/g, '') == row){
+                        if(gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) > column.charCodeAt(0) && gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) <= column.charCodeAt(0) + bound){
+                            prevColor.push(gridPart.style.backgroundColor)
+                            gridPart.style.backgroundColor = showColor
+                        }
+                    }   
+                }else if(gridPart.id.replace( /^\D+/g, '') <= row + bound && gridPart.id.replace( /^\D+/g, '') > row){
+                    if(gridPart.id.replace(/[^A-Za-z]/g, '') === column){
+                        prevColor.push(gridPart.style.backgroundColor)
+                        gridPart.style.backgroundColor = showColor
+                    }
+                }
+            }
+        }
+        }catch(err){
+            console.log(err)
+        }
+       
+    }
+
+    function mouseLeave(event){
+        if(shipSelected && event.target.style.backgroundColor == showColor){
+            event.target.style.backgroundColor = prevColor[0]
+            var i = 1
+            for(const gridPart of document.getElementById("player").querySelectorAll(".playable")){
+                if(isVertical){
+                    if(gridPart.id.replace( /^\D+/g, '') == row){
+                        if(gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) > column.charCodeAt(0) && gridPart.id.replace(/[^A-Za-z]/g, '').charCodeAt(0) <= column.charCodeAt(0) + bound){
+                            gridPart.style.backgroundColor = prevColor[i]
+                            i += 1;
+                        }
+                    }   
+                }else if(gridPart.id.replace( /^\D+/g, '') <= row + bound && gridPart.id.replace( /^\D+/g, '') > row){
+                    if(gridPart.id.replace(/[^A-Za-z]/g, '') === column){
+                        gridPart.style.backgroundColor = prevColor[i]
+                        i += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    function rotate(){
+        if(isVertical){
+            document.getElementById("buttonIndicator").innerHTML = "Change to Horizontal Placement"
+            isVertical = !isVertical
+        }else{
+            document.getElementById("buttonIndicator").innerHTML = "Change to Vertical Placement"
+            isVertical = !isVertical
+        }
+    }
+    function debug(){
+                for(const i of document.getElementById("player").querySelectorAll(".destroyer")){
+                    console.log("destroyer green:" + i.id)
+                }
+                for(const j of document.getElementById("player").querySelectorAll(".submarine")){
+                    console.log("submarine yellow:" + j.id)
+                }
+                for(const k of document.getElementById("player").querySelectorAll(".aircraftCarrier")){
+                    console.log("ac purple:" + k.id)
+                }
+                for(const z of document.getElementById("player").querySelectorAll(".battleship")){
+                    console.log("battleship blue:" + z.id)
+                }
+                for(const z of document.getElementById("player").querySelectorAll(".patrol")){
+                    console.log("battleship blue:" + z.id)
+                }
+    }
+    
+    function start(){
+        document.getElementById("status").innerHTML = "Status: Start"
+        document.getElementById("player").removeEventListener("click", mouseClick)
+        document.getElementById("turn").innerHTML = "Turn: Player"
+
+        initalizeComputerBoard()
+        started = true
+    }
+
+    function getRandomInt(min, max) {
+     min = Math.ceil(min);
+     max = Math.floor(max);
+     return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
+    }   
+
+    function initalizeComputerBoard(){
+        var tiles = []
+        
+        function generateBoat(name, length, color){
+            let orientation = getRandomInt(1, 3) // 1 = vertical
+            var row
+            var column
+            if(orientation === 1){
+                function generate(){
+                row = getRandomInt(1, 12 - length) 
+                column = getRandomInt(1, 11)
+                var same = false
+                for (let i = 0; i < length; i++){
+                    if(tiles.indexOf(`c_${String.fromCharCode(96 + column) + (row + i)}`) > -1){
+                        same = true
+                    }
+                }
+                if(same){
+                    generate()
+                }
+                }
+                generate()
+                for(let i = 0; i < length; i++){
+                tiles.push((`c_${String.fromCharCode(96 + column) + (row + i)}`))
+                document.getElementById(`c_${String.fromCharCode(96 + column) + (row + i)}`).style.backgroundColor = color
+                document.getElementById(`c_${String.fromCharCode(96 + column) + (row + i)}`).classList.add(name)
+                }
+            }else{
+                function generate(){
+                row = getRandomInt(1, 11) 
+                column = getRandomInt(1, 11-length)
+                var same = false
+                for (let i = 0; i < length; i++){
+                    if(tiles.indexOf(`c_${String.fromCharCode(96 + column + i) + (row)}`) > -1){
+                        same = true
+                    }
+                }
+                if(same){
+                    generate()
+                }
+                }
+                generate()
+                for(let i = 0; i < length; i++){
+                tiles.push((`c_${String.fromCharCode(96 + column + i) + (row)}`))
+                document.getElementById(`c_${String.fromCharCode(96 + column + i) + (row)}`).style.backgroundColor = color
+                document.getElementById(`c_${String.fromCharCode(96 + column + i) + (row)}`).classList.add(name)
+                }
+                
+            }   
+        }
+
+        generateBoat("aircraftCarrier", 5, "purple")
+        generateBoat("battleship", 4, "blue")
+        generateBoat("destroyer", 3, "green")
+        generateBoat("submarine", 3, "yellow")
+        generateBoat("patrol", 2, "orange")
+    }
+
+    var aircraftCarrierNum = 0
+    var battleshipNum = 0
+    var destroyerNum = 0
+    var submarineNum = 0
+    var patrolNum = 0
+
+    function fireTorpedo(event){
+        if(started){
+            if(event.target.classList.contains("aircraftCarrier")){
+            if(event.target.style.backgroundColor != "red"){
+                event.target.style.backgroundColor = "red"
+                aircraftCarrierNum += 1;
+                if(aircraftCarrierNum == 5){
+                    shipDown += 1
+                    if(shipDown === 5){
+                        alert("you win")
+                    }
+                }
+            }
+            }
+            else if(event.target.classList.contains("battleship")){
+                if(event.target.style.backgroundColor != "red"){
+                    event.target.style.backgroundColor = "red"
+                    battleshipNum += 1;
+                    if(battleshipNum == 4){
+                    shipDown += 1
+                    if(shipDown === 5){
+                        alert("you win")
+                    }
+                }
+                }
+            }
+            else if(event.target.classList.contains("destroyer")){
+                if(event.target.style.backgroundColor != "red"){
+                event.target.style.backgroundColor = "red"
+                destroyerNum += 1;
+                if(destroyerNum == 3){
+                    shipDown += 1
+                    if(shipDown === 5){
+                        alert("you win")
+                    }
+                }
+                }
+            }
+            else if(event.target.classList.contains("submarine")){
+                if(event.target.style.backgroundColor != "red"){
+                    event.target.style.backgroundColor = "red"
+                    submarineNum += 1;
+                    if(submarineNum == 3){
+                    shipDown += 1
+                    if(shipDown === 5){
+                        alert("you win")
+                    }
+                }
+                }
+            }
+            else if(event.target.classList.contains("patrol")){
+                if(event.target.style.backgroundColor != "red"){
+                    event.target.style.backgroundColor = "red"
+                    patrolNum += 1;
+                    if(patrolNum == 2){
+                    shipDown += 1
+                    if(shipDown === 5){
+                        alert("you win")
+                    }
+                }
+                }
+            }else{
+                event.target.style.backgroundColor = "white"
+            }
+        }
+        
+    }
+
+    var computerHit = null;
+    var hitPos = null;
+    var tryUp = false;
+    var tryDown = false;
+    var tryLeft = false;
+    var tryRight = false;
+
+    function computerFire(){
+        var hit
+        if(computerHit){
+            if(!tryUp){
+                hit = document.getElementById(hitPos.replace( /^\D+/g, '') + 1) + hitPos.replace(/[^A-Za-z]/g, '')
+            }
+        }else{
+            row = getRandomInt(1, 11) 
+            column = getRandomInt(1, 11)
+            hit = document.getElementById(String.fromCharCode(96 + column) + (row))
+        }
+    
+        if(hit.classList.contains("aircraftCarrier")){
+            if(hit.style.backgroundColor != "red"){
+                hit.style.backgroundColor = "red"
+            }
+            }
+            else if(hit.classList.contains("battleship")){
+                if(hit.style.backgroundColor != "red"){
+                    hit.style.backgroundColor = "red"
+                }
+            }
+            else if(hit.classList.contains("destroyer")){
+                if(hit.style.backgroundColor != "red"){
+                hit.style.backgroundColor = "red"
+                }
+            }
+            else if(hit.classList.contains("submarine")){
+                if(hit.style.backgroundColor != "red"){
+                    hit.style.backgroundColor = "red"
+                }
+            }
+            else if(hit.classList.contains("patrol")){
+                if(hit.style.backgroundColor != "red"){
+                    hit.style.backgroundColor = "red"
+                }
+            }else{
+                hit.style.backgroundColor = "white"
+            }
     }
 
 </script>
